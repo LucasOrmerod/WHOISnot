@@ -10,8 +10,6 @@ Make sure all TLDs selected are valid as invalid TLDs will be shown as "unregist
 
 ### Formatting
 
-If you keep the formatting in the wordlist.txt and tldlist.txt files the same as defualt then you won't have any issues.
-
 The script will convert words to lowercase and convert spaces to hyphens. A list of formatting directions is below:
 
 - Each TLD or word should be on a new line
