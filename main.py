@@ -1,54 +1,92 @@
+import re
 import subprocess
 import time
-import re
+from collections import OrderedDict
 
-pattern = r'^[a-z0-9-]+$'
+WORD_REGEX = r'^[a-z0-9-]+$'
+TLD_REGEX = r'^(?!\.)([a-z.]+)$'
 
-# Configuration
-WORDLIST_FILE = "./wordlist.txt" # Every line in this file will be queried to WHOIS
-TLD_LIST_FILE = "./tldlist.txt" # Every subdomain in this file will be used for each word in the wordlist
-SLEEP_INTERVAL = 0.1 # Sleep interval between WHOIS queries
-WHOIS_SERVER_ADDRESS = "whois.iana.org" # WHOIS server to query
+# --- CONFIGURATION ------------------
+WORD_LIST_FILE = "wordlist.txt"
+TLD_LIST_FILE = "tldlist.txt"
+WHOIS_SERVER = "whois.iana.org"
+SLEEP_INTERVAL = 1.5
+# --- CONFIGURATION ------------------
 
-def get_lines_from_file(file_path):
-    with open(file_path, 'r') as file:
-        return [line.strip() for line in file if line.strip()]
+def read_lines_from_text(file):
+    with open(file, "r") as f:
+        lines = [line.strip() for line in f]
+        return lines
     
-def make_domain_list():
-    wordlist = get_lines_from_file(WORDLIST_FILE)
-    tld_list = get_lines_from_file(TLD_LIST_FILE)
+def make_list(input_wordlist, input_tldlist):
+    filtered_wordlist = []
+    filtered_tldlist = []
 
-    print(wordlist)
-    print(tld_list)
+    for word in input_wordlist:
+        word = word.lower().replace(" ", "-")
 
-    for tld in tld_list:
-        if not re.match(r'^[a-z]{2,}$', tld):
-            raise ValueError(f"Invalid TLD format: {tld}")
-        
-    # check the TLDs with the WHOIS server
-    for tld in tld_list:
-        try:
-            subprocess.run(["whois", "-h", WHOIS_SERVER_ADDRESS, tld], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except subprocess.CalledProcessError as e:
-            print(f"Error querying TLD {tld}: {e}")
+        if not re.match(WORD_REGEX, word) or not 1 <= len(word) <=63:
+            print(f"continuing on {word}")
             continue
-        
+        else:
+            filtered_wordlist.append(word)
+    
+    for tld in input_tldlist:
+        tld = tld.lower()
+
+        if not re.match(TLD_REGEX, tld) or not len(tld) > 1:
+            print(f"Skipping TLD: {tld}")
+            continue
+        else:
+            filtered_tldlist.append(tld)
+
+    appending_wordlist = list(OrderedDict.fromkeys(filtered_wordlist))
+    appending_tldlist = list(OrderedDict.fromkeys(filtered_tldlist))
+
+    output_domains = []
+
+    for word in appending_wordlist:
+        for tld in appending_tldlist:
+            output_domains.append(f"{word}.{tld}")
+    
+    return output_domains
+
+def query_whois(list, server):
+    referral_regex = r'Found a referral to [^\n]*\n.*?Domain Name:\s*([A-Z0-9.-]+)'
+
+    output = []
+
+    for domain in list:
+        if server:
+            cmd = ["whois"]
+            cmd.extend(["-h", server])
+            cmd.append(domain)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+
+            if not result.returncode == 0:
+                continue
+
+            match = re.search(referral_regex, result.stdout, re.IGNORECASE | re.DOTALL)
+            
+            if not match:
+                print(f"Domain {domain} is unregistered :)")
+                output.append(domain)
+            else:
+                print(f"Domain {domain} has already been registered :(")
+                
         time.sleep(SLEEP_INTERVAL)
-    
-    domain_list = []
-    for word in wordlist:
-        word = word.lower().replace(" ", "-")  # Replace spaces with hyphens
 
-        if not re.match(pattern, word):
-            continue
-
-        for tld in tld_list:
-            domain_list.append(f"{word}.{tld}")
-    # Remove duplicates by converting to a set and back to a list
-    domain_list = list(set(domain_list))
-    
-    return domain_list
+    return output
 
 def main():
-    list = make_domain_list()
-    print(list)
+    wordlist = read_lines_from_text(WORD_LIST_FILE)
+    tldlist = read_lines_from_text(TLD_LIST_FILE)
+
+    domains = make_list(wordlist, tldlist)
+    unregistered = query_whois(domains, WHOIS_SERVER)
+
+    print("\nThe following domains are unregistered:\n")
+    for d in unregistered:
+        print(f'{d}')
+
+main()
