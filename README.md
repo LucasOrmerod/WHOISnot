@@ -10,9 +10,9 @@ TLD_LIST_FILE refers to the file containing the TLDs to append to the words.
 SLEEP_INTERVAL refers to the time that will be left between requests to avoid overloading the WHOIS server.
 WHOIS_SERVER_ADDRESS refers to the WHOIS server which will be used for the queries.
 
-## Formatting
+### Formatting
 
-The script will convert words to lowercase and convert spaces to hyphens. Below is a list of formatting instructions.
+The script will convert words to lowercase and convert ASCII character and spaces to hyphens. Below is a list of formatting instructions.
 
 - Each TLD or word should be on a new line
 - TLDs should not have a full stop at the beginning (e.g. com instead of .com)
@@ -20,6 +20,6 @@ The script will convert words to lowercase and convert spaces to hyphens. Below 
 - TLDs should be valid
 - Words should only contain letters (a-z), numbers (0-9), and hypens (-)
 
-Incorrectly formatted words and TLDs will be skipped when the script runs.
+Incorrectly formatted words and TLDs will be skipped when the script runs. Duplicates will be removed following formatting.
 
 Example files have been included in the repository; these are wordlist.txt and tldlist.txt.

@@ -2,6 +2,7 @@ import re
 import subprocess
 import time
 from collections import OrderedDict
+import string
 
 WORD_REGEX = r'^[a-z0-9-]+$'
 TLD_REGEX = r'^(?!\.)([a-z.]+)$'
@@ -22,11 +23,14 @@ def make_list(input_wordlist, input_tldlist):
     filtered_wordlist = []
     filtered_tldlist = []
 
+    chars_to_replace = string.punctuation + " "
+    translation_table = str.maketrans(chars_to_replace, "-" * len(chars_to_replace))
+
     for word in input_wordlist:
-        word = word.lower().replace(" ", "-")
+        word = word.lower().translate(translation_table)
 
         if not re.match(WORD_REGEX, word) or not 1 <= len(word) <=63:
-            print(f"continuing on {word}")
+            print(f"Skipping Word: {word}")
             continue
         else:
             filtered_wordlist.append(word)
